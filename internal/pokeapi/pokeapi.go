@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"net/url"
+	"time"
+
+	"github.com/thihxm/gopokedex/internal/pokecache"
 )
 
 const (
@@ -21,11 +23,23 @@ type LocationAreaDTO struct {
 	} `json:"results"`
 }
 
-func GetLocationArea(offset *string) (LocationAreaDTO, error) {
-	locationUrl := baseURL + "/location-area?limit=20"
-	if offset != nil {
-		locationUrl += "&offset=" + *offset
+var cache = pokecache.NewCache(5 * time.Second)
+
+func GetLocationArea(url *string) (LocationAreaDTO, error) {
+	locationUrl := baseURL + "/location-area"
+	if url != nil {
+		locationUrl = *url
 	}
+
+	var locationArea LocationAreaDTO
+	if cacheEntry, ok := cache.Get(locationUrl); ok {
+		err := json.Unmarshal(cacheEntry, &locationArea)
+		if err != nil {
+			return LocationAreaDTO{}, err
+		}
+		return locationArea, nil
+	}
+
 	res, err := http.Get(locationUrl)
 	if err != nil {
 		return LocationAreaDTO{}, err
@@ -37,40 +51,11 @@ func GetLocationArea(offset *string) (LocationAreaDTO, error) {
 		return LocationAreaDTO{}, err
 	}
 
-	var locationArea LocationAreaDTO
+	cache.Add(locationUrl, data)
+
 	err = json.Unmarshal(data, &locationArea)
 	if err != nil {
 		return LocationAreaDTO{}, err
-	}
-
-	if locationArea.Next != nil {
-		parsedURL, _ := url.Parse(*locationArea.Next)
-		if parsedURL != nil {
-			q := parsedURL.Query()
-			offset := q.Get("offset")
-			if offset != "" {
-				locationArea.Next = &offset
-			} else {
-				locationArea.Next = nil
-			}
-		}
-	} else {
-		locationArea.Next = nil
-	}
-
-	if locationArea.Previous != nil {
-		parsedURL, _ := url.Parse(*locationArea.Previous)
-		if parsedURL != nil {
-			q := parsedURL.Query()
-			offset := q.Get("offset")
-			if offset != "" {
-				locationArea.Previous = &offset
-			} else {
-				locationArea.Previous = nil
-			}
-		}
-	} else {
-		locationArea.Previous = nil
 	}
 
 	return locationArea, nil

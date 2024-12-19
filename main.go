@@ -3,9 +3,10 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"internal/github.com/thihxm/pokeapi"
 	"os"
 	"strings"
+
+	"github.com/thihxm/gopokedex/internal/pokeapi"
 )
 
 type config struct {
