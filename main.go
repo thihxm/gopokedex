@@ -70,6 +70,11 @@ func main() {
 			description: "Inspects a caught Pokemon\n" + "Usage: inspect <Pokemon name>",
 			callback:    commandInspect,
 		},
+		"pokedex": {
+			name:        "pokedex",
+			description: "Displays the caught Pokemon",
+			callback:    commandPokedex,
+		},
 	}
 
 	scanner := bufio.NewScanner(os.Stdin)
@@ -197,6 +202,7 @@ func commandCatch(config *config, params ...string) error {
 	if catchRate >= MinCatchRate {
 		pokedex[pokemonName] = pokemon
 		fmt.Printf("%s was caught!\n", pokemonName)
+		fmt.Println("You may now inspect it with the inspect command.")
 	} else {
 		fmt.Printf("%s escaped!\n", pokemonName)
 	}
@@ -212,7 +218,8 @@ func commandInspect(config *config, params ...string) error {
 
 	pokemon, ok := pokedex[pokemonName]
 	if !ok {
-		return fmt.Errorf("you have not caught that pokemon")
+		fmt.Println("you have not caught that pokemon")
+		return nil
 	}
 
 	fmt.Printf("Name: %s\n", pokemon.Name)
@@ -220,11 +227,25 @@ func commandInspect(config *config, params ...string) error {
 	fmt.Printf("Weight: %d\n", pokemon.Weight)
 	fmt.Println("Stats:")
 	for _, stat := range pokemon.Stats {
-		fmt.Printf("  -%s: %d\n", stat.Stat.Name, stat.BaseStat)
+		fmt.Printf(" - %s: %d\n", stat.Stat.Name, stat.BaseStat)
 	}
 	fmt.Println("Types:")
 	for _, t := range pokemon.Types {
-		fmt.Printf("  -%s\n", t.Type.Name)
+		fmt.Printf(" - %s\n", t.Type.Name)
+	}
+
+	return nil
+}
+
+func commandPokedex(config *config, params ...string) error {
+	if len(pokedex) == 0 {
+		fmt.Println("you have not caught any Pokemon")
+		return nil
+	}
+
+	fmt.Println("Your Pokedex:")
+	for pokemon, _ := range pokedex {
+		fmt.Printf(" - %s\n", pokemon)
 	}
 
 	return nil
