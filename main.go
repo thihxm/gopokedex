@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"math/rand"
 	"os"
 	"strings"
 
@@ -20,11 +21,17 @@ type cliCommand struct {
 	callback    func(config *config, params ...string) error
 }
 
+const (
+	PokeballBaseRate int = 255
+	MinCatchRate     int = 75
+)
+
 var commands map[string]cliCommand
 var cfg = config{
 	Next:     nil,
 	Previous: nil,
 }
+var pokedex = map[string]pokeapi.PokemonDTO{}
 
 func main() {
 	commands = map[string]cliCommand{
@@ -52,6 +59,11 @@ func main() {
 			name:        "explore",
 			description: "Explores a location area\n" + "Usage: explore <area>",
 			callback:    commandExplore,
+		},
+		"catch": {
+			name:        "catch",
+			description: "Tries to catch a Pokemon\n" + "Usage: catch <Pokemon name>",
+			callback:    commandCatch,
 		},
 	}
 
@@ -157,6 +169,32 @@ func commandExplore(config *config, params ...string) error {
 	fmt.Println("Found Pokemon:")
 	for _, pokemonEncounters := range locationAreaDetails.PokemonEncounters {
 		fmt.Printf("- %s\n", pokemonEncounters.Pokemon.Name)
+	}
+
+	return nil
+}
+
+func commandCatch(config *config, params ...string) error {
+	if len(params) == 0 {
+		return fmt.Errorf("missing Pokemon name")
+	}
+	pokemonName := params[0]
+
+	pokemon, err := pokeapi.GetPokemon(pokemonName)
+	if err != nil {
+		return fmt.Errorf("failed to get Pokemon (%s): %w", pokemonName, err)
+	}
+
+	fmt.Printf("Throwing a Pokeball at %s...\n", pokemonName)
+
+	catchRate := (rand.Intn(PokeballBaseRate) * 100) / pokemon.BaseExperience
+	fmt.Println(catchRate)
+
+	if catchRate >= MinCatchRate {
+		pokedex[pokemonName] = pokemon
+		fmt.Printf("%s was caught!\n", pokemonName)
+	} else {
+		fmt.Printf("%s escaped!\n", pokemonName)
 	}
 
 	return nil
